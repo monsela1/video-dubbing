@@ -10,7 +10,6 @@
     
     <style>
         body { font-family: 'Nokora', sans-serif; }
-        /* Font Previews */
         .font-moul { font-family: 'Moul', serif; }
         .font-fasthand { font-family: 'Fasthand', cursive; }
     </style>
@@ -21,7 +20,7 @@
         <div class="max-w-6xl mx-auto px-6 h-16 flex items-center gap-3">
             <i class="fa-solid fa-film text-purple-500 text-xl"></i>
             <h1 class="font-bold text-xl bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-                Khmer AI Dubbing <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded ml-2">Ultimate</span>
+                Khmer AI Dubbing <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded ml-2">Ultimate Fix</span>
             </h1>
         </div>
     </nav>
@@ -29,7 +28,6 @@
     <main class="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 mt-4">
         
         <div class="lg:col-span-5 space-y-6">
-            
             <div class="relative border-2 border-dashed border-slate-700 rounded-2xl p-6 bg-slate-800/30 text-center hover:border-purple-500 transition-colors">
                 <input type="file" id="videoInput" accept="video/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                 <div id="uploadPlaceholder">
@@ -40,7 +38,6 @@
             </div>
 
             <div class="bg-slate-800/50 p-5 rounded-2xl border border-slate-700 space-y-4">
-                
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-xs text-slate-400 block mb-1">សំឡេង AI</label>
@@ -95,8 +92,8 @@
 
         <div class="lg:col-span-7 bg-slate-900 rounded-3xl border border-slate-800 p-6 flex flex-col justify-center relative min-h-[500px]">
             
-            <div id="progressContainer" class="hidden absolute inset-0 z-20 bg-slate-900/90 flex flex-col items-center justify-center p-10 backdrop-blur-sm rounded-3xl">
-                <div class="w-full max-w-md space-y-4">
+            <div id="progressContainer" class="hidden absolute inset-0 z-20 bg-slate-900/95 flex flex-col items-center justify-center p-10 backdrop-blur-sm rounded-3xl">
+                <div class="w-full max-w-md space-y-4 text-center">
                     <div class="flex justify-between text-sm font-medium">
                         <span class="text-purple-400 animate-pulse" id="progressStatus">កំពុង Upload...</span>
                         <span class="text-slate-400" id="progressPercent">0%</span>
@@ -104,7 +101,8 @@
                     <div class="w-full bg-slate-800 rounded-full h-4 overflow-hidden shadow-inner border border-slate-700">
                         <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
                     </div>
-                    <p class="text-xs text-center text-slate-500 mt-2">កំពុងដំណើរការលើ Server (សូមកុំបិទផ្ទាំងនេះ)</p>
+                    <p id="errorMessage" class="hidden text-red-400 bg-red-900/20 p-3 rounded-lg text-sm mt-4 border border-red-800"></p>
+                    <button id="retryBtn" class="hidden px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm mt-2">សាកម្តងទៀត</button>
                 </div>
             </div>
 
@@ -142,7 +140,9 @@
             resultBox: document.getElementById('resultContainer'),
             videoOut: document.getElementById('resultVideo'),
             empty: document.getElementById('emptyResult'),
-            dl: document.getElementById('downloadLink')
+            dl: document.getElementById('downloadLink'),
+            errorMsg: document.getElementById('errorMessage'),
+            retryBtn: document.getElementById('retryBtn')
         };
 
         let selectedFile = null;
@@ -158,44 +158,44 @@
         });
 
         document.getElementById('sizeInput').addEventListener('input', (e) => document.getElementById('sizeValue').innerText = e.target.value);
+        els.retryBtn.addEventListener('click', () => { window.location.reload(); });
 
         els.btn.addEventListener('click', async () => {
             if(!selectedFile) return alert("សូមដាក់វីដេអូ!");
 
-            // Show Progress UI
+            // Reset UI
             els.btn.disabled = true;
             els.progressBox.classList.remove('hidden');
             els.resultBox.classList.add('hidden');
             els.empty.classList.remove('hidden');
+            els.errorMsg.classList.add('hidden');
+            els.retryBtn.classList.add('hidden');
             
             els.bar.style.width = "5%";
             els.status.innerText = "កំពុងភ្ជាប់ទៅ Server...";
+            els.status.className = "text-purple-400 animate-pulse";
 
             try {
                 const app = await client(SPACE_NAME);
                 
-                // Get all inputs
                 const inputs = [
                     selectedFile,
                     document.getElementById('langInput').value,
                     document.getElementById('colorInput').value,
                     parseInt(document.getElementById('sizeInput').value),
                     document.getElementById('voiceInput').value,
-                    document.getElementById('fontInput').value,  // New Font
-                    document.getElementById('styleInput').value  // New Style
+                    document.getElementById('fontInput').value,
+                    document.getElementById('styleInput').value
                 ];
 
-                // Use submit() to get status updates
                 const submission = app.submit("/predict", inputs);
 
-                // Listen for progress
                 for await (const msg of submission) {
                     if (msg.type === "status") {
                         if(msg.stage === "pending") {
                             els.status.innerText = "កំពុងរង់ចាំវេន (Queue)...";
                         } else if(msg.progress_data) {
-                            // Update Bar based on Backend progress
-                            const p = msg.progress_data[0]; // { progress: 0.1, desc: "..." }
+                            const p = msg.progress_data[0];
                             if(p) {
                                 const pct = Math.round(p.progress * 100) + "%";
                                 els.bar.style.width = pct;
@@ -204,24 +204,33 @@
                             }
                         }
                     } else if (msg.type === "data") {
-                        // Success
-                        const videoUrl = msg.data[0].url;
-                        els.videoOut.src = videoUrl;
-                        els.dl.href = videoUrl;
-                        els.resultBox.classList.remove('hidden');
-                        els.empty.classList.add('hidden');
-                        els.videoOut.play();
-                        
-                        els.progressBox.classList.add('hidden');
+                        // 🔥 កន្លែងកែសំខាន់: ពិនិត្យមើលថាមានវីដេអូឬអត់?
+                        if (msg.data && msg.data[0] && msg.data[0].url) {
+                            // ជោគជ័យ
+                            const videoUrl = msg.data[0].url;
+                            els.videoOut.src = videoUrl;
+                            els.dl.href = videoUrl;
+                            els.resultBox.classList.remove('hidden');
+                            els.empty.classList.add('hidden');
+                            els.videoOut.play();
+                            els.progressBox.classList.add('hidden');
+                        } else {
+                            // បរាជ័យ (Backend return None)
+                            throw new Error(msg.data[1] || "Unknown error from server");
+                        }
                         els.btn.disabled = false;
                     }
                 }
 
             } catch (error) {
                 console.error(error);
-                alert("Error: " + error.message);
-                els.progressBox.classList.add('hidden');
-                els.btn.disabled = false;
+                // បង្ហាញ Error លើ UI តែម្តង
+                els.status.innerText = "បរាជ័យ!";
+                els.status.className = "text-red-500 font-bold";
+                els.bar.className = "bg-red-600 h-full rounded-full";
+                els.errorMsg.innerText = "Error: " + error.message;
+                els.errorMsg.classList.remove('hidden');
+                els.retryBtn.classList.remove('hidden');
             }
         });
     </script>
