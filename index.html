@@ -3,142 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Dubbing Studio</title>
+    <title>TikTok AI Translator</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Kantumruy+Pro:wght@100..700&family=Moul&family=Nokora:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- React & Lucide -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        body { font-family: 'Kantumruy Pro', sans-serif; -webkit-tap-highlight-color: transparent; }
-        /* Custom Scrollbar for mobile */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        body { font-family: 'Kantumruy Pro', sans-serif; background: #000; color: white; }
+        .glass { background: rgba(30, 30, 30, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .neon-text { text-shadow: 0 0 10px rgba(236, 72, 153, 0.5); }
+        input[type="range"] { accent-color: #ec4899; }
+        
+        /* Hide Scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-[#0f172a] text-white h-screen overflow-hidden">
-    <div id="root" class="h-full"></div>
+<body>
+    <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
-        const { Upload, Play, Pause, Mic, Type, Palette, Video, Volume2 } = lucide;
+        const { Upload, Play, Pause, Wand2, Mic, Type, Palette, Download, Sparkles, ChevronDown } = lucide;
 
-        // --- Demo Data ---
-        const DEMO_SUBTITLES = [
-            { id: 1, start: 1, end: 4, text: "សួស្តី! នេះគឺជាការសាកល្បងលើ Vercel" },
-            { id: 2, start: 5, end: 8, text: "កម្មវិធីនេះបង្កើតដោយ React (Single File)" },
-            { id: 3, start: 9, end: 12, text: "អ្នកអាចប្រើវាបានដោយគ្មានកុំព្យូទ័រ!" }
+        // --- Mock Data: Simulated Translation ---
+        // នេះគឺជាទិន្នន័យដែលសន្មតថា AI បានបកប្រែរួច
+        const MOCK_TRANSLATION = [
+            { id: 1, start: 0, end: 3, text: "សួស្តីអ្នកទាំងអស់គ្នា! ថ្ងៃនេះខ្ញុំមានអ្វីពិសេស។" },
+            { id: 2, start: 3.5, end: 6, text: "នេះគឺជាឧបករណ៍ AI ដែលអាចបកប្រែវីដេអូ TikTok បាន។" },
+            { id: 3, start: 7, end: 10, text: "វានឹងបង្កើតអក្សររត់ និងនិយាយជាភាសាខ្មែរ។" },
+            { id: 4, start: 11, end: 15, text: "តោះ! សាកល្បងទាំងអស់គ្នាឥឡូវនេះ។" }
         ];
 
         const FONTS = [
-            { name: 'Kantumruy Pro', val: "'Kantumruy Pro', sans-serif" },
+            { name: 'Kantumruy', val: "'Kantumruy Pro', sans-serif" },
             { name: 'Moul', val: "'Moul', serif" },
-            { name: 'Battambang', val: "'Battambang', cursive" }
+            { name: 'Battambang', val: "'Battambang', cursive" },
+            { name: 'Nokora', val: "'Nokora', sans-serif" }
+        ];
+
+        const VOICES = [
+            { id: 'v1', name: 'នារីទន់ភ្លន់', pitch: 1.2, rate: 0.9 },
+            { id: 'v2', name: 'បុរសម៉ឹងម៉ាត់', pitch: 0.8, rate: 0.9 },
+            { id: 'v3', name: 'កូនក្មេង (Cute)', pitch: 1.6, rate: 1.1 },
+            { id: 'v4', name: 'Robot AI', pitch: 0.5, rate: 0.8 }
         ];
 
         function App() {
+            // State
             const [videoSrc, setVideoSrc] = useState(null);
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [processStep, setProcessStep] = useState('');
+            
             const [isPlaying, setIsPlaying] = useState(false);
             const [currentTime, setCurrentTime] = useState(0);
             const [duration, setDuration] = useState(0);
-            
-            // UI State
+
+            // Styling State
+            const [activeTab, setActiveTab] = useState('style'); // style, voice
             const [selectedFont, setSelectedFont] = useState(FONTS[0].val);
-            const [fontSize, setFontSize] = useState(18);
             const [textColor, setTextColor] = useState('#ffffff');
             const [bgColor, setBgColor] = useState('#000000');
+            const [bgOpacity, setBgOpacity] = useState(0.6);
+            const [fontSize, setFontSize] = useState(24);
+            
+            // Audio State
+            const [selectedVoice, setSelectedVoice] = useState(VOICES[0]);
             const [voiceEnabled, setVoiceEnabled] = useState(true);
 
             const videoRef = useRef(null);
-            const synth = window.speechSynthesis;
-            const lastSpoken = useRef(null);
+            const lastSpokenRef = useRef(null);
 
             useEffect(() => {
                 lucide.createIcons();
-            }, [videoSrc]);
+            }, [videoSrc, activeTab, isProcessing]);
 
-            const handleFile = (e) => {
+            // Handle Upload & Simulate AI Process
+            const handleUpload = (e) => {
                 const file = e.target.files[0];
-                if(file) setVideoSrc(URL.createObjectURL(file));
+                if (!file) return;
+
+                const url = URL.createObjectURL(file);
+                setVideoSrc(url);
+                setIsProcessing(true);
+
+                // Simulation Steps
+                setTimeout(() => setProcessStep('កំពុងវិភាគសម្លេង...'), 500);
+                setTimeout(() => setProcessStep('កំពុងបកប្រែជាភាសាខ្មែរ...'), 1500);
+                setTimeout(() => setProcessStep('កំពុងបង្កើតអក្សររត់...'), 2500);
+                setTimeout(() => {
+                    setIsProcessing(false);
+                    setProcessStep('');
+                }, 3500);
             };
 
+            // Video Logic
             const handleTimeUpdate = () => {
                 if(videoRef.current) {
                     const t = videoRef.current.currentTime;
                     setCurrentTime(t);
-                    if(voiceEnabled && isPlaying) {
-                        const sub = DEMO_SUBTITLES.find(s => t >= s.start && t <= s.end);
-                        if(sub && lastSpoken.current !== sub.id) {
-                            const u = new SpeechSynthesisUtterance(sub.text);
-                            u.lang = 'km-KH';
-                            synth.speak(u);
-                            lastSpoken.current = sub.id;
+
+                    // TTS Logic
+                    if(voiceEnabled && isPlaying && !isProcessing) {
+                        const sub = MOCK_TRANSLATION.find(s => t >= s.start && t <= s.end);
+                        if(sub && lastSpokenRef.current !== sub.id) {
+                            speak(sub.text);
+                            lastSpokenRef.current = sub.id;
                         }
                     }
                 }
             };
 
+            const speak = (text) => {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'km-KH'; // Try Khmer
+                    utter.pitch = selectedVoice.pitch;
+                    utter.rate = selectedVoice.rate;
+                    
+                    // Reduce video volume while talking
+                    if(videoRef.current) videoRef.current.volume = 0.1;
+                    
+                    utter.onend = () => {
+                        if(videoRef.current) videoRef.current.volume = 1;
+                    };
+                    
+                    window.speechSynthesis.speak(utter);
+                }
+            };
+
             const togglePlay = () => {
                 if(videoRef.current) {
-                    isPlaying ? videoRef.current.pause() : videoRef.current.play();
+                    if(isPlaying) {
+                        videoRef.current.pause();
+                        window.speechSynthesis.cancel();
+                    } else {
+                        videoRef.current.play();
+                    }
                     setIsPlaying(!isPlaying);
                 }
             };
 
-            const activeSub = DEMO_SUBTITLES.find(s => currentTime >= s.start && currentTime <= s.end);
+            const activeSub = MOCK_TRANSLATION.find(s => currentTime >= s.start && currentTime <= s.end);
 
             return (
-                <div className="flex flex-col h-full safe-area-pb">
-                    {/* Navbar */}
-                    <header className="h-16 bg-slate-900/90 backdrop-blur flex items-center justify-between px-4 border-b border-slate-800 z-50 shrink-0">
-                        <div className="flex items-center gap-2 font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-violet-400">
-                            <i data-lucide="video" className="w-6 h-6 text-pink-500"></i>
-                            Vercel Dubbing
+                <div className="h-screen w-full flex flex-col bg-black text-white overflow-hidden">
+                    
+                    {/* Header */}
+                    <header className="h-14 flex items-center justify-between px-4 border-b border-white/10 glass z-50">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-pink-500" />
+                            <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500">
+                                AI Translator
+                            </span>
                         </div>
+                        <button className="bg-white text-black px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">
+                            Export <Download className="w-3 h-3" />
+                        </button>
                     </header>
 
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto bg-black flex flex-col">
+                    {/* Main Content */}
+                    <div className="flex-1 relative flex flex-col">
                         
-                        {/* Video Section */}
-                        <div className="relative w-full aspect-[9/16] max-h-[55vh] bg-slate-900 mx-auto shrink-0 border-b border-slate-800">
+                        {/* Video Area */}
+                        <div className="flex-1 relative bg-[#111] flex items-center justify-center overflow-hidden">
                             {!videoSrc ? (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6 text-center">
-                                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
-                                        <i data-lucide="upload" className="w-8 h-8 text-pink-500"></i>
+                                <div className="text-center p-8 animate-in fade-in zoom-in duration-500">
+                                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
+                                        <Upload className="w-8 h-8 text-pink-500" />
                                     </div>
-                                    <label className="bg-gradient-to-r from-pink-600 to-violet-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-pink-500/20 active:scale-95 transition cursor-pointer">
+                                    <h2 className="text-xl font-bold mb-2">បញ្ចូលវីដេអូ TikTok</h2>
+                                    <p className="text-gray-500 text-sm mb-6">AI នឹងបកប្រែដោយស្វ័យប្រវត្តិ</p>
+                                    <label className="bg-gradient-to-r from-pink-600 to-violet-600 px-8 py-3 rounded-full font-bold cursor-pointer hover:scale-105 transition active:scale-95 inline-block">
                                         ជ្រើសរើសវីដេអូ
-                                        <input type="file" accept="video/*" className="hidden" onChange={handleFile} />
+                                        <input type="file" accept="video/*" className="hidden" onChange={handleUpload} />
                                     </label>
                                 </div>
                             ) : (
                                 <>
+                                    {/* AI Processing Overlay */}
+                                    {isProcessing && (
+                                        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                                            <Wand2 className="w-12 h-12 text-pink-500 animate-bounce mb-4" />
+                                            <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-blue-400">
+                                                {processStep}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <video 
-                                        ref={videoRef} src={videoSrc} 
-                                        className="w-full h-full object-contain"
+                                        ref={videoRef}
+                                        src={videoSrc}
+                                        className="max-h-full max-w-full object-contain"
                                         onTimeUpdate={handleTimeUpdate}
                                         onLoadedMetadata={(e) => setDuration(e.target.duration)}
                                         onClick={togglePlay}
                                         playsInline
                                     />
-                                    {activeSub && (
-                                        <div className="absolute bottom-16 left-4 right-4 text-center pointer-events-none">
-                                            <span style={{
-                                                fontFamily: selectedFont, color: textColor,
-                                                backgroundColor: bgColor + '99', fontSize: fontSize + 'px',
-                                                padding: '8px 12px', borderRadius: '8px', lineHeight: '1.5'
-                                            }} className="inline-block backdrop-blur-sm shadow-lg transition-all">
+
+                                    {/* Subtitle Overlay */}
+                                    {!isProcessing && activeSub && (
+                                        <div className="absolute bottom-[20%] w-full px-6 text-center pointer-events-none">
+                                            <span 
+                                                style={{
+                                                    fontFamily: selectedFont,
+                                                    color: textColor,
+                                                    backgroundColor: `${bgColor}${Math.floor(bgOpacity * 255).toString(16).padStart(2,'0')}`,
+                                                    fontSize: `${fontSize}px`,
+                                                    textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+                                                }}
+                                                className="inline-block px-4 py-2 rounded-xl backdrop-blur-sm transition-all duration-200"
+                                            >
                                                 {activeSub.text}
                                             </span>
                                         </div>
                                     )}
-                                    {!isPlaying && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer" onClick={togglePlay}>
-                                            <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
-                                                <i data-lucide="play" className="w-8 h-8 fill-white text-white ml-1"></i>
+
+                                    {/* Play Button Overlay */}
+                                    {!isPlaying && !isProcessing && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer" onClick={togglePlay}>
+                                            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+                                                <Play className="w-8 h-8 fill-white text-white ml-1" />
                                             </div>
                                         </div>
                                     )}
@@ -146,68 +241,123 @@
                             )}
                         </div>
 
-                        {/* Controls Section */}
-                        <div className="flex-1 bg-slate-900 p-5 space-y-6">
-                            
-                            {/* Timeline */}
-                            {videoSrc && (
-                                <div className="flex items-center gap-3 bg-slate-800 p-3 rounded-xl">
-                                    <button onClick={togglePlay} className="text-pink-400">
-                                        <i data-lucide={isPlaying ? "pause" : "play"} className="w-6 h-6 fill-current"></i>
+                        {/* Controls Panel (Bottom Sheet Style) */}
+                        {videoSrc && !isProcessing && (
+                            <div className="h-[40vh] bg-[#0f0f0f] border-t border-white/10 flex flex-col glass rounded-t-3xl shadow-2xl z-40">
+                                
+                                {/* Progress Bar */}
+                                <div className="px-6 pt-4 pb-2 flex items-center gap-3">
+                                    <button onClick={togglePlay} className="text-pink-500">
+                                        {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
                                     </button>
                                     <input 
-                                        type="range" min="0" max={duration || 100} value={currentTime}
+                                        type="range" 
+                                        min="0" max={duration || 100} 
+                                        value={currentTime}
                                         onChange={(e) => {
-                                            const t = Number(e.target.value);
+                                            const t = parseFloat(e.target.value);
                                             videoRef.current.currentTime = t;
                                             setCurrentTime(t);
                                         }}
-                                        className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none accent-pink-500"
+                                        className="flex-1 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                                     />
+                                    <span className="text-xs font-mono text-gray-400">{Math.floor(currentTime)}s</span>
                                 </div>
-                            )}
 
-                            {/* Voice */}
-                            <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-pink-500/10 rounded-lg text-pink-400">
-                                        <i data-lucide="mic" className="w-5 h-5"></i>
-                                    </div>
-                                    <span className="font-bold text-sm">សំឡេង AI</span>
+                                {/* Tabs */}
+                                <div className="flex border-b border-white/10 px-4">
+                                    <button 
+                                        onClick={() => setActiveTab('style')}
+                                        className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 border-b-2 transition ${activeTab === 'style' ? 'border-pink-500 text-white' : 'border-transparent text-gray-500'}`}
+                                    >
+                                        <Type className="w-4 h-4" /> រចនាអក្សរ
+                                    </button>
+                                    <button 
+                                        onClick={() => setActiveTab('voice')}
+                                        className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 border-b-2 transition ${activeTab === 'voice' ? 'border-pink-500 text-white' : 'border-transparent text-gray-500'}`}
+                                    >
+                                        <Mic className="w-4 h-4" /> សំឡេង AI
+                                    </button>
                                 </div>
-                                <div onClick={() => setVoiceEnabled(!voiceEnabled)} className={`w-12 h-7 rounded-full relative transition-colors ${voiceEnabled ? 'bg-pink-600' : 'bg-slate-600'}`}>
-                                    <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-sm ${voiceEnabled ? 'left-6' : 'left-1'}`}></div>
+
+                                {/* Tab Content */}
+                                <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                                    
+                                    {/* STYLE TAB */}
+                                    {activeTab === 'style' && (
+                                        <div className="space-y-5 animate-in slide-in-from-bottom-5 duration-300">
+                                            {/* Font List */}
+                                            <div>
+                                                <label className="text-xs text-gray-400 mb-2 block uppercase">Font Family</label>
+                                                <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                                    {FONTS.map((f, i) => (
+                                                        <button 
+                                                            key={i} 
+                                                            onClick={() => setSelectedFont(f.val)}
+                                                            style={{ fontFamily: f.val }}
+                                                            className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap border transition ${selectedFont === f.val ? 'bg-pink-600 border-pink-500' : 'bg-[#1a1a1a] border-gray-700 text-gray-300'}`}
+                                                        >
+                                                            {f.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Colors */}
+                                            <div className="flex gap-4">
+                                                <div className="flex-1 bg-[#1a1a1a] p-3 rounded-xl border border-white/5 flex items-center justify-between">
+                                                    <span className="text-xs text-gray-400">អក្សរ</span>
+                                                    <div className="relative w-8 h-8 rounded-full border border-white/20 overflow-hidden" style={{background: textColor}}>
+                                                        <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 bg-[#1a1a1a] p-3 rounded-xl border border-white/5 flex items-center justify-between">
+                                                    <span className="text-xs text-gray-400">ផ្ទៃ</span>
+                                                    <div className="relative w-8 h-8 rounded-full border border-white/20 overflow-hidden" style={{background: bgColor}}>
+                                                        <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Size Slider */}
+                                            <div>
+                                                <div className="flex justify-between text-xs text-gray-400 mb-2">
+                                                    <span>ទំហំ</span>
+                                                    <span>{fontSize}px</span>
+                                                </div>
+                                                <input type="range" min="16" max="48" value={fontSize} onChange={(e) => setFontSize(e.target.value)} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none" />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* VOICE TAB */}
+                                    {activeTab === 'voice' && (
+                                        <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
+                                            <div className="flex items-center justify-between bg-[#1a1a1a] p-4 rounded-xl">
+                                                <span className="font-bold text-sm">បើកសំឡេង AI</span>
+                                                <div onClick={() => setVoiceEnabled(!voiceEnabled)} className={`w-12 h-6 rounded-full relative transition-colors ${voiceEnabled ? 'bg-green-500' : 'bg-gray-600'}`}>
+                                                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${voiceEnabled ? 'left-7' : 'left-1'}`} />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {VOICES.map((v) => (
+                                                    <button 
+                                                        key={v.id}
+                                                        onClick={() => setSelectedVoice(v)}
+                                                        className={`flex items-center justify-between p-4 rounded-xl border transition ${selectedVoice.id === v.id ? 'bg-pink-500/10 border-pink-500 text-pink-400' : 'bg-[#1a1a1a] border-transparent text-gray-400'}`}
+                                                    >
+                                                        <span className="text-sm font-medium">{v.name}</span>
+                                                        {selectedVoice.id === v.id && <Sparkles className="w-4 h-4" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </div>
                             </div>
-
-                            {/* Styling */}
-                            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-4">
-                                <div className="flex items-center gap-2 text-violet-400 mb-1">
-                                    <i data-lucide="type" className="w-4 h-4"></i>
-                                    <span className="font-bold text-sm">រចនាប័ទ្ម</span>
-                                </div>
-                                
-                                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                                    {FONTS.map((f, i) => (
-                                        <button key={i} onClick={() => setSelectedFont(f.val)} style={{fontFamily: f.val}}
-                                            className={`px-4 py-2 rounded-lg text-xs whitespace-nowrap border ${selectedFont === f.val ? 'bg-violet-600 border-violet-500 text-white' : 'bg-slate-900 border-slate-600'}`}>
-                                            {f.name}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-slate-900 p-2 rounded-lg border border-slate-600 flex items-center justify-between">
-                                        <span className="text-xs text-slate-400">ពណ៌អក្សរ</span>
-                                        <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-6 h-6 bg-transparent rounded cursor-pointer" />
-                                    </div>
-                                    <div className="bg-slate-900 p-2 rounded-lg border border-slate-600 flex items-center justify-between">
-                                        <span className="text-xs text-slate-400">ពណ៌ផ្ទៃ</span>
-                                        <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-6 h-6 bg-transparent rounded cursor-pointer" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             );
