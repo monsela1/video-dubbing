@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Video Dubbing</title>
+    <title>AI Video Dubbing Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nokora:wght@400;700&display=swap" rel="stylesheet">
@@ -14,13 +14,13 @@
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen">
 
     <nav class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-6 h-16 flex items-center gap-3">
             <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-xl"></i>
             <h1 class="font-bold text-xl bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-                AI Video Dubbing
+                AI Video Dubbing (Pro)
             </h1>
         </div>
     </nav>
@@ -35,35 +35,47 @@
                     <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-500/20 transition-colors">
                         <i class="fa-solid fa-cloud-arrow-up text-slate-400 group-hover:text-purple-400 text-2xl"></i>
                     </div>
-                    <p class="text-lg font-medium text-slate-300">ចុចទីនេះដើម្បីដាក់វីដេអូ</p>
-                    <p class="text-sm text-slate-500 mt-1">MP4 (Max 5 នាទី)</p>
+                    <p class="text-lg font-medium text-slate-300">ដាក់វីដេអូដើមនៅទីនេះ</p>
+                    <p class="text-sm text-slate-500 mt-1">MP4, MOV (Max 5 Mins)</p>
                 </div>
                 <video id="previewVideo" class="hidden w-full h-48 object-contain rounded-lg shadow-lg mx-auto" controls></video>
             </div>
 
             <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                <div class="flex items-center gap-2 text-slate-300 font-bold uppercase text-xs tracking-wider mb-4">
+                <div class="flex items-center gap-2 text-slate-300 font-bold uppercase text-xs tracking-wider mb-6">
                     <i class="fa-solid fa-sliders"></i> ការកំណត់ (Settings)
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-slate-400 text-sm mb-2">ភាសាគោលដៅ</label>
+                <div class="mb-5">
+                    <label class="block text-slate-400 text-sm mb-2">១. ភាសាគោលដៅ</label>
                     <div class="grid grid-cols-2 gap-2">
                         <button onclick="selectLang('ភាសាខ្មែរ')" id="btnKm" class="lang-btn py-2 rounded-lg bg-purple-600 text-white shadow-lg transition-all">ភាសាខ្មែរ</button>
                         <button onclick="selectLang('English')" id="btnEn" class="lang-btn py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all">English</button>
                     </div>
                 </div>
 
+                <div class="mb-5">
+                    <label class="block text-slate-400 text-sm mb-2">២. ជ្រើសរើសសំឡេង AI</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-microphone absolute left-3 top-3.5 text-slate-400"></i>
+                        <select id="voiceInput" class="w-full bg-slate-900 text-white pl-10 p-3 rounded-lg border border-slate-700 outline-none focus:border-purple-500 appearance-none cursor-pointer">
+                            <option value="ប្រុស (Male)">សំឡេងបុរស (Piseth)</option>
+                            <option value="ស្រី (Female)">សំឡេងនារី (Sreymom)</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3 top-4 text-slate-500 pointer-events-none"></i>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-slate-400 text-sm mb-2">ពណ៌អក្សរ</label>
+                        <label class="block text-slate-400 text-sm mb-2">៣. ពណ៌អក្សរ</label>
                         <div class="flex items-center gap-2 bg-slate-900 p-2 rounded-lg border border-slate-700">
                             <input type="color" id="colorInput" value="#FFD700" class="w-8 h-8 rounded cursor-pointer bg-transparent border-none">
-                            <span class="text-xs text-slate-400" id="colorValue">#FFD700</span>
+                            <span class="text-xs text-slate-400 font-mono" id="colorValue">#FFD700</span>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-slate-400 text-sm mb-2">ទំហំអក្សរ (<span id="sizeValue">50</span>)</label>
+                        <label class="block text-slate-400 text-sm mb-2">៤. ទំហំអក្សរ (<span id="sizeValue">50</span>)</label>
                         <input type="range" id="sizeInput" min="20" max="100" value="50" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
                     </div>
                 </div>
@@ -73,15 +85,17 @@
                 <i class="fa-solid fa-wand-magic-sparkles"></i> ចាប់ផ្តើមបកប្រែ
             </button>
             
-            <div id="loadingStatus" class="hidden text-center space-y-2">
-                <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-700 h-8 w-8 mx-auto"></div>
-                <p class="text-sm text-purple-300 animate-pulse" id="statusText">កំពុងដំណើរការ...</p>
+            <div id="loadingStatus" class="hidden text-center space-y-3 py-4">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-700 h-10 w-10 mx-auto"></div>
+                <p class="text-purple-300 animate-pulse font-medium" id="statusText">កំពុងដំណើរការ...</p>
+                <p class="text-xs text-slate-500">វីដេអូវែងអាចប្រើពេលយូរបន្តិច (៣-៥ នាទី)</p>
             </div>
 
         </div>
 
-        <div class="bg-slate-900 rounded-3xl border border-slate-800 p-2 relative overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
+        <div class="bg-slate-900 rounded-3xl border border-slate-800 p-2 relative overflow-hidden flex flex-col items-center justify-center min-h-[500px]">
             <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -z-10"></div>
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -z-10"></div>
 
             <div id="emptyResult" class="text-center space-y-4 opacity-50">
                 <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto border border-slate-700">
@@ -90,24 +104,23 @@
                 <p class="text-slate-400 font-medium">លទ្ធផលនឹងបង្ហាញនៅទីនេះ</p>
             </div>
 
-            <div id="videoResultContainer" class="hidden w-full h-full flex flex-col items-center relative z-10">
-                <video id="resultVideo" class="w-full h-full object-contain rounded-xl shadow-2xl border border-slate-700 mb-4" controls></video>
-                <a id="downloadLink" href="#" download="dubbed_video.mp4" class="px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-full font-bold shadow-lg flex items-center gap-2">
+            <div id="videoResultContainer" class="hidden w-full h-full flex flex-col items-center relative z-10 p-4">
+                <h3 class="text-green-400 font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-check-circle"></i> ជោគជ័យ!</h3>
+                <video id="resultVideo" class="w-full max-h-[400px] object-contain rounded-xl shadow-2xl border border-slate-700 mb-6 bg-black" controls></video>
+                <a id="downloadLink" href="#" download="dubbed_video.mp4" class="w-full max-w-xs px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-full font-bold shadow-lg flex items-center justify-center gap-2 transition-all">
                     <i class="fa-solid fa-download"></i> Download Video
                 </a>
             </div>
         </div>
-
     </main>
 
     <script type="module">
         import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/+esm";
 
-        // ==========================================
-        // ⚠️ ដាក់ឈ្មោះ Space របស់អ្នកនៅទីនេះ
-        // ==========================================
+        // ======================================================
+        // ⚠️ ដាក់ឈ្មោះ Space របស់អ្នកនៅទីនេះ (ឧ. Sophal/my-app)
         const SPACE_NAME = "monsela/khmer-video-translator"; 
-        // ==========================================
+        // ======================================================
 
         const videoInput = document.getElementById('videoInput');
         const previewVideo = document.getElementById('previewVideo');
@@ -123,7 +136,7 @@
         let selectedFile = null;
         let selectedLang = "ភាសាខ្មែរ";
 
-        // Handle File Upload
+        // File Selection
         videoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -135,7 +148,7 @@
             }
         });
 
-        // Handle Settings
+        // UI Helpers
         window.selectLang = function(lang) {
             selectedLang = lang;
             document.getElementById('btnKm').className = lang === 'ភាសាខ្មែរ' ? 'lang-btn py-2 rounded-lg bg-purple-600 text-white shadow-lg' : 'lang-btn py-2 rounded-lg bg-slate-700 text-slate-300';
@@ -150,37 +163,38 @@
             document.getElementById('colorValue').innerText = e.target.value;
         });
 
-        // Handle Process Button
+        // Main Process
         processBtn.addEventListener('click', async () => {
             if (!selectedFile) {
                 alert("សូមដាក់វីដេអូជាមុនសិន!");
                 return;
             }
 
-            // Show Loading
             processBtn.classList.add('hidden');
             loadingStatus.classList.remove('hidden');
             statusText.innerText = "កំពុងភ្ជាប់ទៅ Server...";
 
             try {
-                // Connect to Hugging Face
+                // Connect
                 const app = await client(SPACE_NAME);
                 
-                statusText.innerText = "កំពុង Upload និងដំណើរការ AI (១-២ នាទី)...";
+                statusText.innerText = "កំពុង Upload និង AI ដំណើរការ (សូមរង់ចាំ)...";
                 
-                // Get Values
+                // Get Settings
                 const color = document.getElementById('colorInput').value;
                 const size = parseInt(document.getElementById('sizeInput').value);
+                const voice = document.getElementById('voiceInput').value;
 
-                // Send to API
+                // Call API with 5 Inputs
                 const result = await app.predict("/predict", [
                     selectedFile, 
                     selectedLang,
                     color,
-                    size
+                    size,
+                    voice
                 ]);
 
-                // Show Result
+                // Handle Result
                 if (result.data && result.data[0]) {
                     const videoUrl = result.data[0].url;
                     resultVideo.src = videoUrl;
@@ -193,7 +207,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert("បរាជ័យ: " + error.message + "\n(សូមពិនិត្យមើលឈ្មោះ Space របស់អ្នក)");
+                alert("បរាជ័យ: " + error.message + "\n(សូមពិនិត្យមើលឈ្មោះ Space នៅក្នុងកូដ)");
             } finally {
                 loadingStatus.classList.add('hidden');
                 processBtn.classList.remove('hidden');
